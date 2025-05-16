@@ -4,19 +4,17 @@ services:
   bc1:
     container_name: client1
     image: bcclient:0.1
-    environment:
-      - NODE_ID=node1
+    command: ["--node=node1"]
     networks:
-      - test-sub_bc_interface
+      - test-server_bc_interface
   
   bc2:
     container_name: client2
     image: bcclient:0.1
-    environment:
-      - NODE_ID=node2
+    command: ["--node=node2"]
     networks:
-      - test-sub_bc_interface
+      - test-server_bc_interface
 
 networks:
-  test-sub_bc_interface:
+  test-server_bc_interface:
     external: true

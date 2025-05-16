@@ -23,4 +23,6 @@ RUN go build -o client
 FROM peer-base
 COPY --from=peer /go/src/test_client /usr/local/bin
 EXPOSE 50051
-CMD ["client", "-node=${NODE_ID}"]
+
+ENTRYPOINT [ "/usr/local/bin/client" ]
+CMD ["--node=node1"]

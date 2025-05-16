@@ -4,36 +4,50 @@ package mesh;
 
 service Mesh {
   // 최초 네트워크 진입 시 committee 정보 수신을 위한 subscribe에  필수
-  rpc JoinNetwork (NodeAccount) returns (stream CommitteeInfo);
+  rpc JoinNetwork (NodeAccount) returns (stream FinalizedCommittee);
   // 노드가 메시지를 브로드캐스트할 때 JoinNetowrk의 stream으로 전송
   // 즉, JoinNetwork로 subscribe한 노드들에게 데이터를 보낸다는 의미
-  rpc Publish (CommitteeInfo) returns (Ack);
+  rpc Publish (FinalizedCommittee) returns (Ack);
 
   //graceful-shutdown을 위한 option(없어도 자동 감지되어 연결해제됨)
   rpc LeaveNetwork (NodeAccount) returns (Ack);
 
-  rpc RequestCommittee (Metrics) returns (Ack);
+  rpc RequestCommittee (CommitteeCandidateInfo) returns (Ack);
 }
 
 message NodeAccount {
-  string node_id    = 1;
-  string public_key = 2;
+  string nodeId    = 1;
+  string publicKey = 2;
 }
 
 //예시
-message Metrics {
-  string data1 = 1;
-  string data2 = 2;
-  string data3 = 3;
+message CommitteeCandidateInfo {
+  uint64 round = 1; //uint64 데이터를 string으로 바꿔야할까
+  string nodeId = 2;
+
+  //2-3번 데이터는 VrfResult 데이터
+  string seed = 3;
+  bytes proof = 4;
+  bytes publicKey = 5;
+
+  string metricData1 = 6;
+  string metricData2 = 7;
+  string metricData3 = 8;
+  //NodeAccount node = 2; //해당 정보는 ipAddress를 통해 확인 가능하므로 필요 없음
+  //...
 }
 
 //예시 
-message CommitteeInfo {
-  repeated NodeAccount committeeList = 1;
+message FinalizedCommittee {
+  uint64 round = 1;
+  //노드를 식별할 수 있는 unique한 값들로 구성된 리스트
+  repeated string nodeId = 2;
+
+  bytes aggregatedCommit = 3;
+  bytes aggregatedPubKey = 4;
 }
 
 message Ack { bool ok = 1; }
-
 
 /*message Payload {
   string origin = 1;

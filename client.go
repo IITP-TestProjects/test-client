@@ -60,13 +60,14 @@ func subscribe(c pb.MeshClient, nodeID string) error {
 				log.Printf("recv error: %v", err)
 				return
 			}
-			log.Printf("[Received] %s: %q", msg.Origin, string(msg.Data))
+			log.Printf("[Received] %s", string(msg.AggregatedPubKey))
 			messageCount++
 
 			//메시지를 10번초과로 수신한 경우, LeaveNetwork API를 호출해 graceful-shutdown
-			if messageCount > 10 {
+			if messageCount > 5 {
 				c.LeaveNetwork(context.Background(),
 					&pb.NodeAccount{NodeId: nodeID})
+				return
 			}
 		}
 	}()
