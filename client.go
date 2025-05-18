@@ -73,3 +73,23 @@ func subscribe(c pb.MeshClient, nodeID string) error {
 	}()
 	return nil
 }
+
+func o1Scenario(c pb.MeshClient) error {
+	// 1. JoinNetwork API를 호출해 CEF를 subscribe
+	_, err := c.JoinNetwork(context.Background(),
+		&pb.NodeAccount{NodeId: "node1"})
+	if err != nil {
+		return err
+	}
+
+	// 2. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
+	// 이후 과정은 서버에서 진행 및 JoinNetwork로 연결한 Subscribe channel로 정보가 내려옴.
+
+	// final. LeaveNetwork API를 호출해 mesh network에서 탈퇴
+	_, err = c.LeaveNetwork(context.Background(),
+		&pb.NodeAccount{NodeId: "node1"})
+	if err != nil {
+		return err
+	}
+	return nil
+}
