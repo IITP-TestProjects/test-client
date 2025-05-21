@@ -2,7 +2,11 @@ module test-client
 
 go 1.24.3
 
-require google.golang.org/grpc v1.72.0
+require (
+	github.com/HyperspaceApp/ed25519 v0.0.0-20180910071725-57bc43264693
+	github.com/yoseplee/vrf v0.0.0-20210814110709-d1caf509310b
+	google.golang.org/grpc v1.72.0
+)
 
 require (
 	golang.org/x/net v0.35.0 // indirect
