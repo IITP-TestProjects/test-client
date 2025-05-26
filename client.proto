@@ -1,0 +1,15 @@
+syntax = "proto3";
+option go_package = "./proto_client";
+package transfer_sign;
+
+service TransferSign {
+    rpc GetPartSign (GetPartSignRequest) returns (Ack);
+}
+
+message GetPartSignRequest {
+    string nodeId = 1;
+    uint64 round = 2;
+    bytes partSign = 3;
+}
+
+message Ack { bool ok = 1; }
