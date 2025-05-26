@@ -1,12 +1,13 @@
 package main
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"log"
 	"math/big"
+
+	"github.com/bford/golang-x-crypto/ed25519"
 
 	vrfs "test-client/vrfs"
 )
@@ -76,7 +77,7 @@ func generateVrfOutput(
 
 	log.Println("EXECUTING_VRF_RATIO_RESULT: ", ratio, sortitionResult)
 
-	if sortitionResult == true {
+	if sortitionResult {
 		return pi
 	} else {
 		return nil

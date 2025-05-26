@@ -22,17 +22,18 @@ message NodeAccount {
 
 //예시
 message CommitteeCandidateInfo {
-  uint64 round = 1; //uint64 데이터를 string으로 바꿔야할까
+  uint64 round = 1;
   string nodeId = 2;
 
   //2-3번 데이터는 VrfResult 데이터
   string seed = 3;
   bytes proof = 4;
   bytes publicKey = 5;
+  bytes commit = 6;
 
-  string metricData1 = 6;
-  string metricData2 = 7;
-  string metricData3 = 8;
+  string metricData1 = 7;
+  string metricData2 = 8;
+  string metricData3 = 9;
   //NodeAccount node = 2; //해당 정보는 ipAddress를 통해 확인 가능하므로 필요 없음
   //...
 }
@@ -45,6 +46,7 @@ message FinalizedCommittee {
 
   bytes aggregatedCommit = 3;
   bytes aggregatedPubKey = 4;
+  repeated bytes publicKeys = 5 ;  //cosi.NewCosigners(pubKeys, nil)에 필요한 데이터
 }
 
 message Ack { bool ok = 1; }

@@ -1,29 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha512"
 	"flag"
-	"io"
+	"fmt"
 	"log"
+	"time"
 
 	pb "test-client/proto_interface"
 
+	"github.com/bford/golang-x-crypto/ed25519/cosi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var round uint64 = 0
-
-func main() {
-	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
-	flag.Parse()
-
-	if err := runClient(*nodeId); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func runClient(nodeId string) error {
+func runClient(nodeId string, ts *transferServer) error {
 	//grpc.Dial하는 함수의 경우, docker기반 테스트 환경이므로 해당 container명 기입함.
 	conn, err := grpc.NewClient("interface-server1:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -33,62 +26,59 @@ func runClient(nodeId string) error {
 	defer conn.Close()
 
 	client := pb.NewMeshClient(conn)
-	firstScenario(client, nodeId)
 
 	//실제 구독 시작
-	if err := subscribe(client, nodeId); err != nil {
+	/* if err := subscribe(client, nodeId, ts); err != nil {
 		return err
-	}
+	} => 아래 fistScenario 내부 동작과 겹침*/
+
+	firstScenario(client, nodeId, ts)
 
 	select {}
 }
 
-func subscribe(c pb.MeshClient, nodeId string) error {
-	stream, err := c.JoinNetwork(context.Background(),
-		&pb.NodeAccount{NodeId: nodeId})
-	if err != nil {
-		return err
+func main() {
+	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
+	flag.Parse()
+
+	ts := &transferServer{}
+
+	if *nodeId == "node1" {
+		go func() {
+			startClientGrpcServer(ts)
+		}()
+		// 서버가 포트 바인딩을 완료할 시간을 조금 주어도 좋음
+		time.Sleep(200 * time.Millisecond)
 	}
 
-	// receive loop
-	go func() {
-		messageCount := 0
-		for {
-			msg, err := stream.Recv()
-			if err == io.EOF {
-				log.Println("stream closed")
-				return
-			}
-			if err != nil {
-				log.Printf("recv error: %v", err)
-				return
-			}
-			log.Printf("[Received] %s", string(msg.AggregatedPubKey))
-			messageCount++
-
-			//메시지를 10번초과로 수신한 경우, LeaveNetwork API를 호출해 graceful-shutdown
-			if messageCount > 5 {
-				c.LeaveNetwork(context.Background(),
-					&pb.NodeAccount{NodeId: nodeId})
-				return
-			}
-		}
-	}()
-	return nil
+	if err := runClient(*nodeId, ts); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // o1만에 검증가능한 sign 시연
-func firstScenario(c pb.MeshClient, nodeId string) {
+func firstScenario(c pb.MeshClient, nodeId string, ts *transferServer) {
 	// 1. JoinNetwork API를 호출해 CEF를 subscribe
-	subscribe(c, nodeId)
-	seed := "hungry"
+	subscribe(c, nodeId, ts)
+	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
 
-	pk, sk := generateKeys()
+	publicKey, secretKey = generateKeys()
 
 	// 2. vrf 실행
-	vrfProof := generateVrfOutput(seed, pk, sk)
+	vrfProof := generateVrfOutput(seed, publicKey, secretKey)
 
-	// 2. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
+	// 3. schnorr에 사용할 nonce commit생성, secretR은 서명 시 사용(보관)
+	var err error
+	var commit cosi.Commitment
+
+	hash := sha512.Sum512([]byte(seed))
+	reader := bytes.NewReader(hash[:])
+	commit, secretR, err = cosi.Commit(reader)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// 4. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
 	// 이후 과정은 서버에서 진행 및 연결한 Subscribe channel로 정보가 내려옴.
 	ack, err := c.RequestCommittee(context.Background(),
 		&pb.CommitteeCandidateInfo{
@@ -97,7 +87,8 @@ func firstScenario(c pb.MeshClient, nodeId string) {
 
 			Seed:      seed,
 			Proof:     vrfProof,
-			PublicKey: pk,
+			PublicKey: publicKey,
+			Commit:    commit,
 
 			MetricData1: "test-metric1",
 			MetricData2: "test-metric2",
