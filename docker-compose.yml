@@ -5,6 +5,8 @@ services:
     container_name: client1
     image: bcclient:0.1
     command: ["--node=node1"]
+    ports:
+      - "50052:50052"
     networks:
       - test-server_bc_interface
   
