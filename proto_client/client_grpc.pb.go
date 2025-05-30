@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	TransferSign_GetPartSign_FullMethodName = "/transfer_sign.TransferSign/GetPartSign"
+	TransferSign_GetPartSign_FullMethodName   = "/transfer_sign.TransferSign/GetPartSign"
+	TransferSign_GetLegacySign_FullMethodName = "/transfer_sign.TransferSign/GetLegacySign"
 )
 
 // TransferSignClient is the client API for TransferSign service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TransferSignClient interface {
 	GetPartSign(ctx context.Context, in *GetPartSignRequest, opts ...grpc.CallOption) (*Ack, error)
+	GetLegacySign(ctx context.Context, in *GetLegacySignRequest, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type transferSignClient struct {
@@ -46,11 +48,21 @@ func (c *transferSignClient) GetPartSign(ctx context.Context, in *GetPartSignReq
 	return out, nil
 }
 
+func (c *transferSignClient) GetLegacySign(ctx context.Context, in *GetLegacySignRequest, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, TransferSign_GetLegacySign_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TransferSignServer is the server API for TransferSign service.
 // All implementations must embed UnimplementedTransferSignServer
 // for forward compatibility
 type TransferSignServer interface {
 	GetPartSign(context.Context, *GetPartSignRequest) (*Ack, error)
+	GetLegacySign(context.Context, *GetLegacySignRequest) (*Ack, error)
 	mustEmbedUnimplementedTransferSignServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedTransferSignServer struct {
 
 func (UnimplementedTransferSignServer) GetPartSign(context.Context, *GetPartSignRequest) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPartSign not implemented")
+}
+func (UnimplementedTransferSignServer) GetLegacySign(context.Context, *GetLegacySignRequest) (*Ack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLegacySign not implemented")
 }
 func (UnimplementedTransferSignServer) mustEmbedUnimplementedTransferSignServer() {}
 
@@ -92,6 +107,24 @@ func _TransferSign_GetPartSign_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TransferSign_GetLegacySign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLegacySignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferSignServer).GetLegacySign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TransferSign_GetLegacySign_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferSignServer).GetLegacySign(ctx, req.(*GetLegacySignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TransferSign_ServiceDesc is the grpc.ServiceDesc for TransferSign service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,10 @@ var TransferSign_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPartSign",
 			Handler:    _TransferSign_GetPartSign_Handler,
+		},
+		{
+			MethodName: "GetLegacySign",
+			Handler:    _TransferSign_GetLegacySign_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -33,11 +33,51 @@ type roundState struct {
 	count         int
 }
 
+type legacySignState struct {
+	message   string
+	signature []byte
+	publicKey []byte
+}
+
 type transferServer struct {
 	cpb.UnimplementedTransferSignServer
 
-	mu           sync.Mutex
-	roundContext map[uint64]*roundState
+	mu            sync.Mutex
+	roundContext  map[uint64]*roundState
+	legacyContext []legacySignState
+}
+
+func aggregateSignature(roundContext *roundState) []byte {
+	log.Printf("Size of sigParts: %d Bytes\n",
+		len(roundContext.sigParts)*len(roundContext.sigParts[0]))
+	//log.Println("--------------Start Aggregate Signature---------------")
+	//log.Println("part Sign length: ", len(roundContext.sigParts))
+	cosigners := cosi.NewCosigners(roundContext.publicKeys, nil)
+
+	if len(roundContext.sigParts) != len(roundContext.publicKeys) {
+		log.Printf("mismatch: sig=%d pubKeys=%d wait",
+			len(roundContext.sigParts), len(roundContext.publicKeys))
+		return nil
+	}
+
+	aggregatedSign := cosigners.AggregateSignature(
+		roundContext.aggCommit, roundContext.sigParts)
+
+	//log.Println("------------------Aggregation Done-------------------")
+
+	return aggregatedSign
+}
+
+func verifySignature(roundContext *roundState, aggregatedSign []byte) bool {
+	//log.Println("Aggregated Signature: ", aggregatedSign)
+	log.Printf("Size of aggSign: %d Bytes", len(aggregatedSign))
+	log.Println("--------------Start Verify--------------")
+	start := time.Now()
+	ok := cosi.Verify(roundContext.publicKeys, nil, testMsg, aggregatedSign)
+	duration := time.Since(start)
+	log.Printf("Verify Result: %t, Duration: %s\n", ok, duration)
+	log.Println("--------------End Verify--------------")
+	return ok
 }
 
 // [RPC]part Signature를 받으면 이것들을 모아서 압축해서 response해야함.
@@ -46,16 +86,17 @@ func (t *transferServer) GetPartSign(
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	//sig := partSign.PartSign
 	round := partSign.Round
 	roundContext := t.roundContext[round]
 
+	//client 노드로부터 서명을 집계함.
 	roundContext.sigParts = append(roundContext.sigParts, partSign.PartSign)
 	roundContext.nodeId = partSign.NodeId
 	roundContext.count++
 
+	// 해당 라운드에서 정해진 모든 커미티로부터 서명을 집계한 경우
 	ready := roundContext.count == roundContext.committeeSize
-	// 해당 라운드 커미티로부터 모든 서명을 받은 경우
+
 	if !ready {
 		return &cpb.Ack{Ok: true}, nil
 	}
@@ -64,42 +105,21 @@ func (t *transferServer) GetPartSign(
 			len(roundContext.sigParts), len(roundContext.publicKeys))
 		return &cpb.Ack{Ok: true}, nil
 	}
-	log.Printf("--------------Before Sort--------------\n%x\n%x\n%x\n%x\n\n",
-		roundContext.sigParts[0], roundContext.sigParts[1],
-		roundContext.sigParts[2], roundContext.sigParts[3])
+	/* log.Printf("--------------Before aggregate--------------\n%x\n%x\n%x\n%x\n\n",
+	roundContext.sigParts[0], roundContext.sigParts[1],
+	roundContext.sigParts[2], roundContext.sigParts[3]) */
 
-	//log.Println("--------------Start sort round Context---------------")
-	/* sort.Slice(roundContext.sigParts, func(i, j int) bool {
-		return roundContext.sigParts[i].nodeId < roundContext.sigParts[j].nodeId
-	})
-	log.Printf("\nAfter sort: %x, %x, %x, %x\n\n",
-		roundContext.sigParts[0].sigPart, roundContext.sigParts[1].sigPart,
-		roundContext.sigParts[2].sigPart, roundContext.sigParts[3].sigPart) */
-
-	//정렬된 서명조합을 []cosoi.SignaturePart에 저장해서 AggregateSignature하도록 넘겨줌
-	/* var sigPartsFinal []cosi.SignaturePart
-	for _, sigPart := range roundContext.sigParts {
-		sigPartsFinal = append(sigPartsFinal, sigPart.sigPart)
-	} */
-
-	log.Println("--------------Start Aggregate Signature---------------")
-	//log.Println("part Sign length: ", len(roundContext.sigParts))
-	cosigners := cosi.NewCosigners(roundContext.publicKeys, nil)
-
-	if len(roundContext.sigParts) != len(roundContext.publicKeys) {
-		log.Printf("mismatch: sig=%d pubKeys=%d wait",
-			len(roundContext.sigParts), len(roundContext.publicKeys))
-		return &cpb.Ack{Ok: true}, nil
+	//집계한 서명을 압축.
+	aggregatedSign := aggregateSignature(roundContext)
+	if aggregatedSign == nil {
+		return &cpb.Ack{Ok: false}, nil
 	}
 
-	aggregatedSign := cosigners.AggregateSignature(
-		roundContext.aggCommit, roundContext.sigParts)
-
-	log.Println("Aggregated Signature: ", aggregatedSign)
-	log.Println("--------------Start Verify--------------")
-	ok := cosi.Verify(roundContext.publicKeys, nil, testMsg, aggregatedSign)
-	log.Println("Verify Result: ", ok)
-	log.Println("--------------End Verify--------------")
+	//압축한 서명이 올바른지 검증
+	ok := verifySignature(roundContext, aggregatedSign)
+	if !ok {
+		return &cpb.Ack{Ok: false}, nil
+	}
 
 	roundContext.count = 0
 	roundContext.sigParts = nil
@@ -165,8 +185,7 @@ func subscribe(c pb.MeshClient, nodeId string, ts *transferServer) error {
 				log.Printf("recv error: %v", err)
 				return
 			}
-			log.Println("[Received], [AggregatedPublicKey] ", msg.AggregatedPubKey)
-			log.Println("[NodeId]", msg.NodeId)
+			//log.Printf("[Receive!], [AggregatedPublicKey: %x]", msg.AggregatedPubKey)
 
 			//특정 라운드에 따른 committee 개수를 저장, publickeys를 저장
 			ts.setCommitteeInfo(msg)
@@ -183,7 +202,7 @@ func subscribe(c pb.MeshClient, nodeId string, ts *transferServer) error {
 				ts.roundContext[msg.Round].sigParts =
 					append(ts.roundContext[msg.Round].sigParts, sigPart)
 				ts.roundContext[msg.Round].count++
-				log.Println("Node1 append partsign")
+				log.Printf("\nNode1 append partsign\n")
 				ts.mu.Unlock()
 			}
 		}

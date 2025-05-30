@@ -16,6 +16,29 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var node_num = 7
+
+func main() {
+	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
+	flag.Parse()
+
+	ts := &transferServer{}
+
+	if *nodeId == "node1" {
+		go func() {
+			startClientGrpcServer(ts)
+		}()
+		// 서버가 포트 바인딩을 완료할 시간을 주기 위해 잠시 대기
+		time.Sleep(200 * time.Millisecond)
+	} else {
+		time.Sleep(100 * time.Millisecond) // 다른 노드들은 잠시 대기
+	}
+
+	if err := runClient(*nodeId, ts); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func runClient(nodeId string, ts *transferServer) error {
 	//grpc.Dial하는 함수의 경우, docker기반 테스트 환경이므로 해당 container명 기입함.
 	conn, err := grpc.NewClient("interface-server1:50051",
@@ -31,32 +54,13 @@ func runClient(nodeId string, ts *transferServer) error {
 	/* if err := subscribe(client, nodeId, ts); err != nil {
 		return err
 	} => 아래 fistScenario 내부 동작과 겹침*/
-
+	legacySignScenario(nodeId, ts)
 	firstScenario(client, nodeId, ts)
 
 	select {}
 }
 
-func main() {
-	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
-	flag.Parse()
-
-	ts := &transferServer{}
-
-	if *nodeId == "node1" {
-		go func() {
-			startClientGrpcServer(ts)
-		}()
-		// 서버가 포트 바인딩을 완료할 시간을 조금 주어도 좋음
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	if err := runClient(*nodeId, ts); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// o1만에 검증가능한 sign 시연
+// O(1)만에 검증가능한 sign 시연 시나리오
 func firstScenario(c pb.MeshClient, nodeId string, ts *transferServer) {
 	// 1. JoinNetwork API를 호출해 CEF를 subscribe
 	subscribe(c, nodeId, ts)
@@ -80,7 +84,7 @@ func firstScenario(c pb.MeshClient, nodeId string, ts *transferServer) {
 
 	// 4. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
 	// 이후 과정은 서버에서 진행 및 연결한 Subscribe channel로 정보가 내려옴.
-	ack, err := c.RequestCommittee(context.Background(),
+	_, err = c.RequestCommittee(context.Background(),
 		&pb.CommitteeCandidateInfo{
 			Round:  round,
 			NodeId: nodeId,
@@ -97,8 +101,6 @@ func firstScenario(c pb.MeshClient, nodeId string, ts *transferServer) {
 	)
 	if err != nil {
 		log.Println("RequestCommittee failed", err)
-	} else {
-		log.Println("RequestCommittee ACK:", ack)
 	}
 
 	// final. LeaveNetwork API를 호출해 mesh network에서 탈퇴

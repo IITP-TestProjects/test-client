@@ -46,7 +46,7 @@ func hashRatio(vrfOutput []byte) float64 {
 }
 
 func isSelected(ratio float64) bool {
-	fmt.Println(ratio)
+	//fmt.Println(ratio)
 	if ratio > sortitionThreshold {
 		return false
 	}
@@ -57,13 +57,13 @@ func generateVrfOutput(
 	seed string,
 	pubKey ed25519.PublicKey,
 	secKey ed25519.PrivateKey) []byte {
-	msg := sha256.Sum256([]byte(fmt.Sprintf("%s", seed)))
+	seedMsg := sha256.Sum256([]byte(fmt.Sprintf("%s", seed)))
 
-	pi, vrfOutput, err := vrfs.Prove(pubKey, secKey, msg[:])
+	pi, vrfOutput, err := vrfs.Prove(pubKey, secKey, seedMsg[:])
 	if err != nil {
 		log.Fatal(err)
 	}
-	res, err := vrfs.Verify(pubKey, pi, msg[:])
+	res, err := vrfs.Verify(pubKey, pi, seedMsg[:])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func generateVrfOutput(
 	//현재 threshold를 1.0으로 설정했으므로 모든 노드가 선출됨.
 	sortitionResult := isSelected(ratio)
 
-	log.Println("EXECUTING_VRF_RATIO_RESULT: ", ratio, sortitionResult)
+	//log.Println("EXECUTING_VRF_RATIO_RESULT: ", ratio, sortitionResult)
 
 	if sortitionResult {
 		return pi
