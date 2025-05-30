@@ -4,12 +4,21 @@ package transfer_sign;
 
 service TransferSign {
     rpc GetPartSign (GetPartSignRequest) returns (Ack);
+
+    rpc GetLegacySign(GetLegacySignRequest) returns (Ack);
 }
 
 message GetPartSignRequest {
     string nodeId = 1;
     uint64 round = 2;
     bytes partSign = 3;
+}
+
+//for legacy sign test
+message GetLegacySignRequest {
+    string message = 1;
+    bytes signature = 2;
+    bytes publicKey = 3;
 }
 
 message Ack { bool ok = 1; }
