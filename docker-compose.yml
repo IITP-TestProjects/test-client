@@ -31,6 +31,27 @@ services:
     networks:
       - test-server_bc_interface
 
+  bc5:
+    container_name: client5
+    image: bcclient:0.1
+    command: ["--node=node5"]
+    networks:
+      - test-server_bc_interface
+
+  bc6:
+    container_name: client6
+    image: bcclient:0.1
+    command: ["--node=node6"]
+    networks:
+      - test-server_bc_interface
+      
+  bc7:
+    container_name: client7
+    image: bcclient:0.1
+    command: ["--node=node7"]
+    networks:
+      - test-server_bc_interface
+
 networks:
   test-server_bc_interface:
     external: true
