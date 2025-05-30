@@ -22,7 +22,6 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/HyperspaceApp/ed25519"
@@ -92,7 +91,7 @@ func Hash(pi []byte) []byte {
 // []byte(message)
 // Verify checks if the proof is correct or not
 func Verify(pk []byte, pi []byte, m []byte) (bool, error) {
-	fmt.Println("Run verify code.")
+	//fmt.Println("Run verify code.")
 	r, c, s, err := decodeProof(pi)
 	if err != nil {
 		return false, err
