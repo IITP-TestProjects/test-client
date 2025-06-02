@@ -13,6 +13,8 @@ service Mesh {
   rpc LeaveNetwork (NodeAccount) returns (Ack);
 
   rpc RequestCommittee (CommitteeCandidateInfo) returns (Ack);
+
+  //rpc RequestAggreegatedCommit ()
 }
 
 message NodeAccount {
@@ -47,6 +49,11 @@ message FinalizedCommittee {
   bytes aggregatedCommit = 3;
   bytes aggregatedPubKey = 4;
   repeated bytes publicKeys = 5 ;  //cosi.NewCosigners(pubKeys, nil)에 필요한 데이터
+}
+
+message CommitData {
+  string nodeId = 1;  //nodId필요한지 다시 한번 확인.
+  bytes commit = 2;
 }
 
 message Ack { bool ok = 1; }

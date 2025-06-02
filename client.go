@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var node_num = 7
+var node_num = 10
 
 func main() {
 	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
@@ -54,24 +54,32 @@ func runClient(nodeId string, ts *transferServer) error {
 	/* if err := subscribe(client, nodeId, ts); err != nil {
 		return err
 	} => 아래 fistScenario 내부 동작과 겹침*/
+	subscribe(client, nodeId, ts)
 	legacySignScenario(nodeId, ts)
-	firstScenario(client, nodeId, ts)
-
-	select {}
-}
-
-// O(1)만에 검증가능한 sign 시연 시나리오
-func firstScenario(c pb.MeshClient, nodeId string, ts *transferServer) {
-	// 1. JoinNetwork API를 호출해 CEF를 subscribe
-	subscribe(c, nodeId, ts)
-	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
 
 	publicKey, secretKey = generateKeys()
 
-	// 2. vrf 실행
+	for {
+		aggregateSignScenario(client, nodeId /* , ts */)
+		time.Sleep(20 * time.Second) // 10초마다 시나리오 반복
+		round++
+	}
+	//select {}
+}
+
+// O(1)만에 검증가능한 sign 시연 시나리오
+func aggregateSignScenario(c pb.MeshClient, nodeId string /* , ts *transferServer */) {
+	// 1. JoinNetwork API를 호출해 CEF를 subscribe
+	//subscribe(c, nodeId, ts)
+	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
+
+	//publicKey, secretKey = generateKeys()
+
+	// 2. vrf 실행(커미티 선정된 상태면 실행필요 x)
 	vrfProof := generateVrfOutput(seed, publicKey, secretKey)
 
 	// 3. schnorr에 사용할 nonce commit생성, secretR은 서명 시 사용(보관)
+	// -> secretR과 짝인 commit은 매 라운드마다 생성되어야함.
 	var err error
 	var commit cosi.Commitment
 

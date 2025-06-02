@@ -86,8 +86,8 @@ func (t *transferServer) GetPartSign(
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	round := partSign.Round
-	roundContext := t.roundContext[round]
+	sigRound := partSign.Round
+	roundContext := t.roundContext[sigRound]
 
 	//client 노드로부터 서명을 집계함.
 	roundContext.sigParts = append(roundContext.sigParts, partSign.PartSign)
@@ -105,9 +105,7 @@ func (t *transferServer) GetPartSign(
 			len(roundContext.sigParts), len(roundContext.publicKeys))
 		return &cpb.Ack{Ok: true}, nil
 	}
-	/* log.Printf("--------------Before aggregate--------------\n%x\n%x\n%x\n%x\n\n",
-	roundContext.sigParts[0], roundContext.sigParts[1],
-	roundContext.sigParts[2], roundContext.sigParts[3]) */
+	log.Println("All parts received, round:", sigRound)
 
 	//집계한 서명을 압축.
 	aggregatedSign := aggregateSignature(roundContext)
@@ -121,8 +119,9 @@ func (t *transferServer) GetPartSign(
 		return &cpb.Ack{Ok: false}, nil
 	}
 
-	roundContext.count = 0
-	roundContext.sigParts = nil
+	//roundContext.count = 0
+	//roundContext.sigParts = nil
+	roundContext = nil
 
 	return &cpb.Ack{Ok: true}, nil
 }
@@ -196,7 +195,7 @@ func subscribe(c pb.MeshClient, nodeId string, ts *transferServer) error {
 
 			if nodeId != "node1" {
 				time.Sleep(5 * time.Second) //임시코드(node1 우선실행 최대한 보장) 다른방법을 찾아봐.
-				sendPrimaryNodeForAggregateSignature(nodeId, sigPart)
+				sendPrimaryNodeForAggregateSignature(nodeId, sigPart, msg.Round)
 			} else {
 				ts.mu.Lock()
 				ts.roundContext[msg.Round].sigParts =
@@ -210,7 +209,7 @@ func subscribe(c pb.MeshClient, nodeId string, ts *transferServer) error {
 	return nil
 }
 
-func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignaturePart) {
+func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignaturePart, aggRound uint64) {
 	// 서명한 데이터를 primary node에 전송해서 sign을 압축
 	if nodeId != "node1" {
 		conn, err := grpc.NewClient("client1:50052",
@@ -224,7 +223,7 @@ func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignatureP
 		_, err = client.GetPartSign(context.Background(),
 			&cpb.GetPartSignRequest{
 				NodeId:   nodeId,
-				Round:    round,
+				Round:    aggRound,
 				PartSign: sigPart,
 			})
 		if err != nil {
@@ -232,3 +231,6 @@ func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignatureP
 		}
 	}
 }
+
+// commit 생성하는 코드 및 커밋 압축하는 코드 필요:
+//
