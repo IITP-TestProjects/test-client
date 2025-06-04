@@ -14,7 +14,6 @@ import (
 )
 
 func legacySignScenario(nodeId string, t *transferServer) {
-	log.Println("--------------Legacy Sign Scenario Start--------------")
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		log.Fatalf("Legacy GenerateKey failed: %v", err)

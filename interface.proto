@@ -4,17 +4,15 @@ package mesh;
 
 service Mesh {
   // 최초 네트워크 진입 시 committee 정보 수신을 위한 subscribe에  필수
-  rpc JoinNetwork (NodeAccount) returns (stream FinalizedCommittee);
   // 노드가 메시지를 브로드캐스트할 때 JoinNetowrk의 stream으로 전송
-  // 즉, JoinNetwork로 subscribe한 노드들에게 데이터를 보낸다는 의미
-  rpc Publish (FinalizedCommittee) returns (Ack);
+  rpc JoinNetwork (NodeAccount) returns (stream FinalizedCommittee);
 
   //graceful-shutdown을 위한 option(없어도 자동 감지되어 연결해제됨)
   rpc LeaveNetwork (NodeAccount) returns (Ack);
 
   rpc RequestCommittee (CommitteeCandidateInfo) returns (Ack);
 
-  //rpc RequestAggreegatedCommit ()
+  rpc RequestAggregatedCommit (CommitData) returns (Ack);
 }
 
 message NodeAccount {
@@ -52,13 +50,8 @@ message FinalizedCommittee {
 }
 
 message CommitData {
-  string nodeId = 1;  //nodId필요한지 다시 한번 확인.
+  uint64 round = 1;
   bytes commit = 2;
 }
 
 message Ack { bool ok = 1; }
-
-/*message Payload {
-  string origin = 1;
-  bytes  data   = 2;
-}*/

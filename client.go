@@ -54,13 +54,13 @@ func runClient(nodeId string, ts *transferServer) error {
 	/* if err := subscribe(client, nodeId, ts); err != nil {
 		return err
 	} => 아래 fistScenario 내부 동작과 겹침*/
-	subscribe(client, nodeId, ts)
+	ts.subscribe(client, nodeId)
 	legacySignScenario(nodeId, ts)
 
 	publicKey, secretKey = generateKeys()
 
 	for {
-		aggregateSignScenario(client, nodeId /* , ts */)
+		aggregateSignScenario(client, nodeId)
 		time.Sleep(20 * time.Second) // 10초마다 시나리오 반복
 		round++
 	}
@@ -68,8 +68,8 @@ func runClient(nodeId string, ts *transferServer) error {
 }
 
 // O(1)만에 검증가능한 sign 시연 시나리오
-func aggregateSignScenario(c pb.MeshClient, nodeId string /* , ts *transferServer */) {
-	// 1. JoinNetwork API를 호출해 CEF를 subscribe
+func aggregateSignScenario(c pb.MeshClient, nodeId string) {
+	// 1. JoinNetwork API를 호출해 CEF를 subscribe (매번 다른 seed 생성)
 	//subscribe(c, nodeId, ts)
 	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
 
@@ -92,23 +92,36 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string /* , ts *transferServe
 
 	// 4. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
 	// 이후 과정은 서버에서 진행 및 연결한 Subscribe channel로 정보가 내려옴.
-	_, err = c.RequestCommittee(context.Background(),
-		&pb.CommitteeCandidateInfo{
-			Round:  round,
-			NodeId: nodeId,
+	if round == 0 {
+		_, err = c.RequestCommittee(context.Background(),
+			&pb.CommitteeCandidateInfo{
+				Round:  round,
+				NodeId: nodeId,
 
-			Seed:      seed,
-			Proof:     vrfProof,
-			PublicKey: publicKey,
-			Commit:    commit,
+				Seed:      seed,
+				Proof:     vrfProof,
+				PublicKey: publicKey,
+				Commit:    commit,
 
-			MetricData1: "test-metric1",
-			MetricData2: "test-metric2",
-			MetricData3: "test-metric3",
-		},
-	)
-	if err != nil {
-		log.Println("RequestCommittee failed", err)
+				MetricData1: "test-metric1",
+				MetricData2: "test-metric2",
+				MetricData3: "test-metric3",
+			},
+		)
+		if err != nil {
+			log.Println("RequestCommittee failed", err)
+		}
+	} else {
+		//log.Println("send RequestAggreegatedCommit")
+		_, err = c.RequestAggregatedCommit(context.Background(),
+			&pb.CommitData{
+				Round:  round,
+				Commit: commit,
+			},
+		)
+		if err != nil {
+			log.Println("RequestAggreegatedCommit failed", err)
+		}
 	}
 
 	// final. LeaveNetwork API를 호출해 mesh network에서 탈퇴

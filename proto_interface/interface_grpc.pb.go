@@ -19,10 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Mesh_JoinNetwork_FullMethodName      = "/mesh.Mesh/JoinNetwork"
-	Mesh_Publish_FullMethodName          = "/mesh.Mesh/Publish"
-	Mesh_LeaveNetwork_FullMethodName     = "/mesh.Mesh/LeaveNetwork"
-	Mesh_RequestCommittee_FullMethodName = "/mesh.Mesh/RequestCommittee"
+	Mesh_JoinNetwork_FullMethodName             = "/mesh.Mesh/JoinNetwork"
+	Mesh_LeaveNetwork_FullMethodName            = "/mesh.Mesh/LeaveNetwork"
+	Mesh_RequestCommittee_FullMethodName        = "/mesh.Mesh/RequestCommittee"
+	Mesh_RequestAggregatedCommit_FullMethodName = "/mesh.Mesh/RequestAggregatedCommit"
 )
 
 // MeshClient is the client API for Mesh service.
@@ -30,13 +30,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MeshClient interface {
 	// 최초 네트워크 진입 시 committee 정보 수신을 위한 subscribe에  필수
-	JoinNetwork(ctx context.Context, in *NodeAccount, opts ...grpc.CallOption) (Mesh_JoinNetworkClient, error)
 	// 노드가 메시지를 브로드캐스트할 때 JoinNetowrk의 stream으로 전송
-	// 즉, JoinNetwork로 subscribe한 노드들에게 데이터를 보낸다는 의미
-	Publish(ctx context.Context, in *FinalizedCommittee, opts ...grpc.CallOption) (*Ack, error)
+	JoinNetwork(ctx context.Context, in *NodeAccount, opts ...grpc.CallOption) (Mesh_JoinNetworkClient, error)
 	// graceful-shutdown을 위한 option(없어도 자동 감지되어 연결해제됨)
 	LeaveNetwork(ctx context.Context, in *NodeAccount, opts ...grpc.CallOption) (*Ack, error)
 	RequestCommittee(ctx context.Context, in *CommitteeCandidateInfo, opts ...grpc.CallOption) (*Ack, error)
+	RequestAggregatedCommit(ctx context.Context, in *CommitData, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type meshClient struct {
@@ -79,15 +78,6 @@ func (x *meshJoinNetworkClient) Recv() (*FinalizedCommittee, error) {
 	return m, nil
 }
 
-func (c *meshClient) Publish(ctx context.Context, in *FinalizedCommittee, opts ...grpc.CallOption) (*Ack, error) {
-	out := new(Ack)
-	err := c.cc.Invoke(ctx, Mesh_Publish_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *meshClient) LeaveNetwork(ctx context.Context, in *NodeAccount, opts ...grpc.CallOption) (*Ack, error) {
 	out := new(Ack)
 	err := c.cc.Invoke(ctx, Mesh_LeaveNetwork_FullMethodName, in, out, opts...)
@@ -106,18 +96,26 @@ func (c *meshClient) RequestCommittee(ctx context.Context, in *CommitteeCandidat
 	return out, nil
 }
 
+func (c *meshClient) RequestAggregatedCommit(ctx context.Context, in *CommitData, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, Mesh_RequestAggregatedCommit_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MeshServer is the server API for Mesh service.
 // All implementations must embed UnimplementedMeshServer
 // for forward compatibility
 type MeshServer interface {
 	// 최초 네트워크 진입 시 committee 정보 수신을 위한 subscribe에  필수
-	JoinNetwork(*NodeAccount, Mesh_JoinNetworkServer) error
 	// 노드가 메시지를 브로드캐스트할 때 JoinNetowrk의 stream으로 전송
-	// 즉, JoinNetwork로 subscribe한 노드들에게 데이터를 보낸다는 의미
-	Publish(context.Context, *FinalizedCommittee) (*Ack, error)
+	JoinNetwork(*NodeAccount, Mesh_JoinNetworkServer) error
 	// graceful-shutdown을 위한 option(없어도 자동 감지되어 연결해제됨)
 	LeaveNetwork(context.Context, *NodeAccount) (*Ack, error)
 	RequestCommittee(context.Context, *CommitteeCandidateInfo) (*Ack, error)
+	RequestAggregatedCommit(context.Context, *CommitData) (*Ack, error)
 	mustEmbedUnimplementedMeshServer()
 }
 
@@ -128,14 +126,14 @@ type UnimplementedMeshServer struct {
 func (UnimplementedMeshServer) JoinNetwork(*NodeAccount, Mesh_JoinNetworkServer) error {
 	return status.Errorf(codes.Unimplemented, "method JoinNetwork not implemented")
 }
-func (UnimplementedMeshServer) Publish(context.Context, *FinalizedCommittee) (*Ack, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
-}
 func (UnimplementedMeshServer) LeaveNetwork(context.Context, *NodeAccount) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LeaveNetwork not implemented")
 }
 func (UnimplementedMeshServer) RequestCommittee(context.Context, *CommitteeCandidateInfo) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestCommittee not implemented")
+}
+func (UnimplementedMeshServer) RequestAggregatedCommit(context.Context, *CommitData) (*Ack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestAggregatedCommit not implemented")
 }
 func (UnimplementedMeshServer) mustEmbedUnimplementedMeshServer() {}
 
@@ -169,24 +167,6 @@ type meshJoinNetworkServer struct {
 
 func (x *meshJoinNetworkServer) Send(m *FinalizedCommittee) error {
 	return x.ServerStream.SendMsg(m)
-}
-
-func _Mesh_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FinalizedCommittee)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MeshServer).Publish(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Mesh_Publish_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MeshServer).Publish(ctx, req.(*FinalizedCommittee))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Mesh_LeaveNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -225,6 +205,24 @@ func _Mesh_RequestCommittee_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Mesh_RequestAggregatedCommit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MeshServer).RequestAggregatedCommit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Mesh_RequestAggregatedCommit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MeshServer).RequestAggregatedCommit(ctx, req.(*CommitData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Mesh_ServiceDesc is the grpc.ServiceDesc for Mesh service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -233,16 +231,16 @@ var Mesh_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MeshServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Publish",
-			Handler:    _Mesh_Publish_Handler,
-		},
-		{
 			MethodName: "LeaveNetwork",
 			Handler:    _Mesh_LeaveNetwork_Handler,
 		},
 		{
 			MethodName: "RequestCommittee",
 			Handler:    _Mesh_RequestCommittee_Handler,
+		},
+		{
+			MethodName: "RequestAggregatedCommit",
+			Handler:    _Mesh_RequestAggregatedCommit_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
