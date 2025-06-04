@@ -67,26 +67,6 @@ func verifySignature(cosignContext *cosignContext, aggregatedSign []byte) bool {
 	return ok
 }
 
-/* func (t *transferServer) setCommitteeInfo(msg *pb.FinalizedCommittee) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if t.roundContext == nil {
-		t.roundContext = make(map[uint64]*roundState)
-	}
-
-	pubKeys := make([]ed25519.PublicKey, 0, len(msg.PublicKeys))
-	for _, pk := range msg.PublicKeys {
-		if len(pk) != ed25519.PublicKeySize {
-			log.Printf("[%s]Invalid public key size detected\n", msg.NodeId)
-			continue
-		}
-		pubKeys = append(pubKeys, ed25519.PublicKey(pk))
-	}
-	st := &roundState{}
-	t.roundContext[msg.Round] = st
-} */
-
 func (t *transferServer) setCosignContext(msg *pb.FinalizedCommittee) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -136,6 +116,8 @@ func (ts *transferServer) subscribe(c pb.MeshClient, nodeId string) error {
 
 			// 커미티가 정해진 상태에서 커밋값만 받아왔다면 저장된 aggPubKey를 사용
 			ts.initRoundContext()
+
+			// 커미티가 이미 정해져 aggCommit만 받는경우 aggPubKey는 넘어오지 않음
 			if msg.AggregatedPubKey != nil {
 				ts.setCosignContext(msg)
 				committeeSize = len(msg.NodeId)
@@ -149,6 +131,9 @@ func (ts *transferServer) subscribe(c pb.MeshClient, nodeId string) error {
 				time.Sleep(5 * time.Second) //임시코드(node1 우선실행 최대한 보장) 다른방법을 찾아봐.
 				sendPrimaryNodeForAggregateSignature(nodeId, sigPart, msg.Round)
 			} else {
+				if msg.NodeId != nil {
+					log.Println("Committee:", msg.NodeId)
+				}
 				ts.mu.Lock()
 				ts.roundContext[msg.Round].sigParts =
 					append(ts.roundContext[msg.Round].sigParts, sigPart)

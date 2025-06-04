@@ -61,7 +61,7 @@ func runClient(nodeId string, ts *transferServer) error {
 
 	for {
 		aggregateSignScenario(client, nodeId)
-		time.Sleep(20 * time.Second) // 10초마다 시나리오 반복
+		time.Sleep(10 * time.Second) // 20초마다 시나리오 반복
 		round++
 	}
 	//select {}
