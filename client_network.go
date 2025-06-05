@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	cpb "test-client/proto_client"
 	pb "test-client/proto_interface"
 	"time"
 
@@ -24,11 +25,6 @@ type cosignContext struct {
 	publicKeys []ed25519.PublicKey
 	aggCommit  []byte
 	aggPubKey  []byte // 커밋값이 정해진 상태에서 사용됨
-}
-
-type roundState struct {
-	nodeId   string
-	sigParts []cosi.SignaturePart
 }
 
 type legacySignState struct {
@@ -94,7 +90,7 @@ func (ts *transferServer) initRoundContext() {
 }
 
 // [NonRPC] 내부에서 사용하는 함수
-func (ts *transferServer) subscribe(c pb.MeshClient, nodeId string) error {
+func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClient, nodeId string) error {
 	stream, err := c.JoinNetwork(context.Background(),
 		&pb.NodeAccount{NodeId: nodeId})
 	if err != nil {
@@ -129,7 +125,7 @@ func (ts *transferServer) subscribe(c pb.MeshClient, nodeId string) error {
 
 			if nodeId != "node1" {
 				time.Sleep(5 * time.Second) //임시코드(node1 우선실행 최대한 보장) 다른방법을 찾아봐.
-				sendPrimaryNodeForAggregateSignature(nodeId, sigPart, msg.Round)
+				sendPrimaryNodeForAggregateSignature(priCli, nodeId, sigPart, msg.Round)
 			} else {
 				if msg.NodeId != nil {
 					log.Println("Committee:", msg.NodeId)

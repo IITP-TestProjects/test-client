@@ -8,12 +8,9 @@ import (
 	"time"
 
 	cpb "test-client/proto_client"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-func legacySignScenario(nodeId string, t *transferServer) {
+func legacySignScenario(nodeId string, t *transferServer, priCon cpb.TransferSignClient) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		log.Fatalf("Legacy GenerateKey failed: %v", err)
@@ -22,17 +19,17 @@ func legacySignScenario(nodeId string, t *transferServer) {
 	msg := []byte("legacy_test_message")
 	signature := ed25519.Sign(priv, msg)
 	if nodeId != "node1" {
-		conn, err := grpc.NewClient("client1:50052",
+		/* conn, err := grpc.NewClient("client1:50052",
 			grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer conn.Close()
-		client := cpb.NewTransferSignClient(conn)
+		client := cpb.NewTransferSignClient(conn) */
 
 		time.Sleep(5 * time.Second) // 임시 코드(node1 우선실행 최대한 보장)
 		// Legacy Sign 정보를 전송
-		_, err = client.GetLegacySign(context.Background(),
+		_, err = priCon.GetLegacySign(context.Background(),
 			&cpb.GetLegacySignRequest{
 				Message:   string(msg),
 				Signature: signature,

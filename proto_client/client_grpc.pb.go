@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	TransferSign_GetPartSign_FullMethodName   = "/transfer_sign.TransferSign/GetPartSign"
 	TransferSign_GetLegacySign_FullMethodName = "/transfer_sign.TransferSign/GetLegacySign"
+	TransferSign_RoundDone_FullMethodName     = "/transfer_sign.TransferSign/RoundDone"
 )
 
 // TransferSignClient is the client API for TransferSign service.
@@ -29,6 +30,7 @@ const (
 type TransferSignClient interface {
 	GetPartSign(ctx context.Context, in *GetPartSignRequest, opts ...grpc.CallOption) (*Ack, error)
 	GetLegacySign(ctx context.Context, in *GetLegacySignRequest, opts ...grpc.CallOption) (*Ack, error)
+	RoundDone(ctx context.Context, in *RoundDoneRequest, opts ...grpc.CallOption) (TransferSign_RoundDoneClient, error)
 }
 
 type transferSignClient struct {
@@ -57,12 +59,45 @@ func (c *transferSignClient) GetLegacySign(ctx context.Context, in *GetLegacySig
 	return out, nil
 }
 
+func (c *transferSignClient) RoundDone(ctx context.Context, in *RoundDoneRequest, opts ...grpc.CallOption) (TransferSign_RoundDoneClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TransferSign_ServiceDesc.Streams[0], TransferSign_RoundDone_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &transferSignRoundDoneClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TransferSign_RoundDoneClient interface {
+	Recv() (*RoundDoneData, error)
+	grpc.ClientStream
+}
+
+type transferSignRoundDoneClient struct {
+	grpc.ClientStream
+}
+
+func (x *transferSignRoundDoneClient) Recv() (*RoundDoneData, error) {
+	m := new(RoundDoneData)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TransferSignServer is the server API for TransferSign service.
 // All implementations must embed UnimplementedTransferSignServer
 // for forward compatibility
 type TransferSignServer interface {
 	GetPartSign(context.Context, *GetPartSignRequest) (*Ack, error)
 	GetLegacySign(context.Context, *GetLegacySignRequest) (*Ack, error)
+	RoundDone(*RoundDoneRequest, TransferSign_RoundDoneServer) error
 	mustEmbedUnimplementedTransferSignServer()
 }
 
@@ -75,6 +110,9 @@ func (UnimplementedTransferSignServer) GetPartSign(context.Context, *GetPartSign
 }
 func (UnimplementedTransferSignServer) GetLegacySign(context.Context, *GetLegacySignRequest) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLegacySign not implemented")
+}
+func (UnimplementedTransferSignServer) RoundDone(*RoundDoneRequest, TransferSign_RoundDoneServer) error {
+	return status.Errorf(codes.Unimplemented, "method RoundDone not implemented")
 }
 func (UnimplementedTransferSignServer) mustEmbedUnimplementedTransferSignServer() {}
 
@@ -125,6 +163,27 @@ func _TransferSign_GetLegacySign_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TransferSign_RoundDone_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(RoundDoneRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TransferSignServer).RoundDone(m, &transferSignRoundDoneServer{stream})
+}
+
+type TransferSign_RoundDoneServer interface {
+	Send(*RoundDoneData) error
+	grpc.ServerStream
+}
+
+type transferSignRoundDoneServer struct {
+	grpc.ServerStream
+}
+
+func (x *transferSignRoundDoneServer) Send(m *RoundDoneData) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // TransferSign_ServiceDesc is the grpc.ServiceDesc for TransferSign service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -141,6 +200,12 @@ var TransferSign_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TransferSign_GetLegacySign_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "RoundDone",
+			Handler:       _TransferSign_RoundDone_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "client.proto",
 }

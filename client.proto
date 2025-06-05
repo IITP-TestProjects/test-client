@@ -6,6 +6,8 @@ service TransferSign {
     rpc GetPartSign (GetPartSignRequest) returns (Ack);
 
     rpc GetLegacySign(GetLegacySignRequest) returns (Ack);
+
+    rpc RoundDone(RoundDoneRequest) returns(stream RoundDoneData);
 }
 
 message GetPartSignRequest {
@@ -19,6 +21,14 @@ message GetLegacySignRequest {
     string message = 1;
     bytes signature = 2;
     bytes publicKey = 3;
+}
+
+message RoundDoneRequest {
+    string nodeId = 1;
+}
+
+message RoundDoneData {
+    uint64 round = 1;
 }
 
 message Ack { bool ok = 1; }

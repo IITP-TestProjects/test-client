@@ -9,8 +9,12 @@ import (
 
 	"github.com/bford/golang-x-crypto/ed25519/cosi"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
+
+type roundState struct {
+	nodeId   string
+	sigParts []cosi.SignaturePart
+}
 
 type transferServer struct {
 	cpb.UnimplementedTransferSignServer
@@ -19,6 +23,9 @@ type transferServer struct {
 	roundContext  map[uint64]*roundState
 	cosignContext *cosignContext
 	legacyContext []legacySignState
+	subs          map[string]chan *cpb.RoundDoneData
+
+	wait chan struct{}
 }
 
 func startClientGrpcServer(ts *transferServer) {
@@ -74,21 +81,19 @@ func (t *transferServer) GetPartSign(
 	}
 
 	delete(t.roundContext, sigRound) //Garbage Collection
+
+	close(t.wait)
+	t.broadcast(&cpb.RoundDoneData{
+		Round: sigRound,
+	})
 	return &cpb.Ack{Ok: true}, nil
 }
 
-func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignaturePart, aggRound uint64) {
+func sendPrimaryNodeForAggregateSignature(
+	priCli cpb.TransferSignClient, nodeId string, sigPart cosi.SignaturePart, aggRound uint64) {
 	// 서명한 데이터를 primary node에 전송해서 sign을 압축
 	if nodeId != "node1" {
-		conn, err := grpc.NewClient("client1:50052",
-			grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
-
-		client := cpb.NewTransferSignClient(conn)
-		_, err = client.GetPartSign(context.Background(),
+		_, err := priCli.GetPartSign(context.Background(),
 			&cpb.GetPartSignRequest{
 				NodeId:   nodeId,
 				Round:    aggRound,
@@ -98,4 +103,68 @@ func sendPrimaryNodeForAggregateSignature(nodeId string, sigPart cosi.SignatureP
 			log.Fatalf("GetPartSign failed: %v", err)
 		}
 	}
+}
+
+func (t *transferServer) RoundDone(
+	rr *cpb.RoundDoneRequest, stream cpb.TransferSign_RoundDoneServer) error {
+	nodeId := rr.NodeId
+	ch := make(chan *cpb.RoundDoneData, 100)
+
+	t.mu.Lock()
+	if t.subs == nil {
+		t.subs = make(map[string]chan *cpb.RoundDoneData)
+	}
+	t.subs[nodeId] = ch
+	t.mu.Unlock()
+	//log.Printf("Node %s subscribed to RoundDone", nodeId)
+
+	defer func() {
+		t.mu.Lock()
+		delete(t.subs, nodeId)
+		t.mu.Unlock()
+		close(ch)
+		log.Printf("node %s left", nodeId)
+	}()
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case msg := <-ch:
+			if err := stream.Send(msg); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (t *transferServer) broadcast(msg *cpb.RoundDoneData) {
+	for _, ch := range t.subs {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+}
+
+func (t *transferServer) subscribeDoneSignal(c cpb.TransferSignClient, nodeId string) error {
+	stream, err := c.RoundDone(context.Background(),
+		&cpb.RoundDoneRequest{NodeId: nodeId})
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				return
+			}
+			if msg.Round == round {
+				//log.Println("Received RoundDone for round:", msg.Round, round)
+				close(t.wait)
+			}
+		}
+	}()
+	return nil
 }

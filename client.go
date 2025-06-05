@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 
+	cpb "test-client/proto_client"
 	pb "test-client/proto_interface"
 
 	"github.com/bford/golang-x-crypto/ed25519/cosi"
@@ -35,7 +36,7 @@ func main() {
 		// 서버가 포트 바인딩을 완료할 시간을 주기 위해 잠시 대기
 		time.Sleep(200 * time.Millisecond)
 	} else {
-		time.Sleep(100 * time.Millisecond) // 다른 노드들은 잠시 대기
+		time.Sleep(400 * time.Millisecond) // 다른 노드들은 잠시 대기
 	}
 
 	if err := runClient(*nodeId, ts, *serverAddress); err != nil {
@@ -52,23 +53,35 @@ func runClient(nodeId string, ts *transferServer, serverAddr string) error {
 	}
 	defer conn.Close()
 
+	priCon, err := grpc.NewClient("client1:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer priCon.Close()
+
 	client := pb.NewMeshClient(conn)
+	priCli := cpb.NewTransferSignClient(priCon)
 
 	//실제 구독 시작
-	/* if err := subscribe(client, nodeId, ts); err != nil {
-		return err
-	} => 아래 fistScenario 내부 동작과 겹침*/
-	ts.subscribe(client, nodeId)
-	legacySignScenario(nodeId, ts)
+	ts.subscribe(client, priCli, nodeId)
+	if nodeId != "node1" {
+		ts.subscribeDoneSignal(priCli, nodeId)
+	}
+	legacySignScenario(nodeId, ts, priCli)
 
 	publicKey, secretKey = generateKeys()
+	ts.wait = make(chan struct{})
 
 	for {
 		aggregateSignScenario(client, nodeId)
-		time.Sleep(10 * time.Second) // 20초마다 시나리오 반복
+		//time.Sleep(10 * time.Second) // 20초마다 시나리오 반복
+		<-ts.wait
+		ts.wait = make(chan struct{})
+		time.Sleep(4 * time.Second) // 3초 대기 후 다음 라운드 시작
 		round++
+		//log.Println("Round completed, Next round:", round)
 	}
-	//select {}
 }
 
 // O(1)만에 검증가능한 sign 시연 시나리오
@@ -76,6 +89,7 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 	// 1. JoinNetwork API를 호출해 CEF를 subscribe (매번 다른 seed 생성)
 	//subscribe(c, nodeId, ts)
 	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
+	//log.Println("seed:", seed)
 
 	//publicKey, secretKey = generateKeys()
 
