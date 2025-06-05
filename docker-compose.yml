@@ -4,7 +4,7 @@ services:
   bc1:
     container_name: client1
     image: bcclient:0.1
-    command: ["--node=node1"]
+    command: ["--nodeid=node1"]
     ports:
       - "50052:50052"
     networks:
@@ -13,63 +13,63 @@ services:
   bc2:
     container_name: client2
     image: bcclient:0.1
-    command: ["--node=node2"]
+    command: ["--nodeid=node2"]
     networks:
       - test-server_bc_interface
 
   bc3:
     container_name: client3
     image: bcclient:0.1
-    command: ["--node=node3"]
+    command: ["--nodeid=node3"]
     networks:
       - test-server_bc_interface
 
   bc4:
     container_name: client4
     image: bcclient:0.1
-    command: ["--node=node4"]
+    command: ["--nodeid=node4"]
     networks:
       - test-server_bc_interface
 
   bc5:
     container_name: client5
     image: bcclient:0.1
-    command: ["--node=node5"]
+    command: ["--nodeid=node5"]
     networks:
       - test-server_bc_interface
 
   bc6:
     container_name: client6
     image: bcclient:0.1
-    command: ["--node=node6"]
+    command: ["--nodeid=node6"]
     networks:
       - test-server_bc_interface
       
   bc7:
     container_name: client7
     image: bcclient:0.1
-    command: ["--node=node7"]
+    command: ["--nodeid=node7"]
     networks:
       - test-server_bc_interface
 
   bc8:
     container_name: client8
     image: bcclient:0.1
-    command: ["--node=node8"]
+    command: ["--nodeid=node8"]
     networks:
       - test-server_bc_interface
 
   bc9:
     container_name: client9
     image: bcclient:0.1
-    command: ["--node=node9"]
+    command: ["--nodeid=node9"]
     networks:
       - test-server_bc_interface
       
   bc10:
     container_name: client10
     image: bcclient:0.1
-    command: ["--node=node10"]
+    command: ["--nodeid=node10"]
     networks:
       - test-server_bc_interface
 

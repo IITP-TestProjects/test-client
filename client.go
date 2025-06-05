@@ -16,11 +16,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var node_num = 10
+var node_num int
 
 func main() {
-	nodeId := flag.String("node", "node1", "node ID to subscribe. -node=<nodeId>")
+	nodeId := flag.String("nodeid", "node1", "node ID to subscribe. -node=<nodeId>")
+	serverAddress := flag.String("server", "interface-server1:50051", "--server=<serverIP>:<port>")
+	nodeNum := flag.Int("nodenum", 10, "number of nodes in the network. -nodenum=<node_num>")
 	flag.Parse()
+
+	node_num = *nodeNum
 
 	ts := &transferServer{}
 
@@ -34,14 +38,14 @@ func main() {
 		time.Sleep(100 * time.Millisecond) // 다른 노드들은 잠시 대기
 	}
 
-	if err := runClient(*nodeId, ts); err != nil {
+	if err := runClient(*nodeId, ts, *serverAddress); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runClient(nodeId string, ts *transferServer) error {
+func runClient(nodeId string, ts *transferServer, serverAddr string) error {
 	//grpc.Dial하는 함수의 경우, docker기반 테스트 환경이므로 해당 container명 기입함.
-	conn, err := grpc.NewClient("interface-server1:50051",
+	conn, err := grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatal(err)
