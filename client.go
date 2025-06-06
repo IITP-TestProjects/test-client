@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	cpb "test-client/proto_client"
@@ -89,9 +90,6 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 	// 1. JoinNetwork API를 호출해 CEF를 subscribe (매번 다른 seed 생성)
 	//subscribe(c, nodeId, ts)
 	seed := fmt.Sprintf("round-%d-node-%s", round, nodeId)
-	//log.Println("seed:", seed)
-
-	//publicKey, secretKey = generateKeys()
 
 	// 2. vrf 실행(커미티 선정된 상태면 실행필요 x)
 	vrfProof := generateVrfOutput(seed, publicKey, secretKey)
@@ -111,7 +109,7 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 	// 4. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
 	// 이후 과정은 서버에서 진행 및 연결한 Subscribe channel로 정보가 내려옴.
 	if round == 0 {
-		_, err = c.RequestCommittee(context.Background(),
+		resCommittee, err := c.RequestCommittee(context.Background(),
 			&pb.CommitteeCandidateInfo{
 				Round:  round,
 				NodeId: nodeId,
@@ -126,6 +124,11 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 				MetricData3: "test-metric3",
 			},
 		)
+		//false가 반환된 경우라면 해당 노드는 이미 프로세스가 시작되었으므로 라운드에 참여 못했다는 뜻.
+		if !resCommittee.Ok {
+			log.Println("I didn't candidate node", nodeId)
+			os.Exit(0)
+		}
 		if err != nil {
 			log.Println("RequestCommittee failed", err)
 		}
