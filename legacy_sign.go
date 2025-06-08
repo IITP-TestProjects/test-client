@@ -19,14 +19,6 @@ func legacySignScenario(nodeId string, t *transferServer, priCon cpb.TransferSig
 	msg := []byte("legacy_test_message")
 	signature := ed25519.Sign(priv, msg)
 	if nodeId != "node1" {
-		/* conn, err := grpc.NewClient("client1:50052",
-			grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
-		client := cpb.NewTransferSignClient(conn) */
-
 		time.Sleep(5 * time.Second) // 임시 코드(node1 우선실행 최대한 보장)
 		// Legacy Sign 정보를 전송
 		_, err = priCon.GetLegacySign(context.Background(),
@@ -63,7 +55,7 @@ func (t *transferServer) GetLegacySign(
 		publicKey: req.PublicKey,
 	})
 
-	if len(t.legacyContext) == node_num {
+	if len(t.legacyContext) == global_node_num {
 		log.Printf("Size of legacySigns: %d Bytes",
 			len(t.legacyContext[0].signature)*len(t.legacyContext))
 		log.Printf("-------------- Start Legacy Sign Verify--------------\n")

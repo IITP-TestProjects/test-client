@@ -23,7 +23,7 @@ type transferServer struct {
 	roundContext  map[uint64]*roundState
 	cosignContext *cosignContext
 	legacyContext []legacySignState
-	subs          map[string]chan *cpb.RoundDoneData
+	subs          map[string]chan *cpb.InternalBroadcastData
 
 	wait chan struct{}
 }
@@ -83,7 +83,7 @@ func (t *transferServer) GetPartSign(
 	delete(t.roundContext, sigRound) //Garbage Collection
 
 	close(t.wait)
-	t.broadcast(&cpb.RoundDoneData{
+	t.broadcast(&cpb.InternalBroadcastData{
 		Round: sigRound,
 	})
 	return &cpb.Ack{Ok: true}, nil
@@ -105,18 +105,18 @@ func sendPrimaryNodeForAggregateSignature(
 	}
 }
 
-func (t *transferServer) RoundDone(
-	rr *cpb.RoundDoneRequest, stream cpb.TransferSign_RoundDoneServer) error {
-	nodeId := rr.NodeId
-	ch := make(chan *cpb.RoundDoneData, 100)
+func (t *transferServer) InternalBroadcaster(
+	ib *cpb.InternalSubscribe, stream cpb.TransferSign_InternalBroadcasterServer) error {
+	nodeId := ib.NodeId
+	ch := make(chan *cpb.InternalBroadcastData, 100)
 
 	t.mu.Lock()
 	if t.subs == nil {
-		t.subs = make(map[string]chan *cpb.RoundDoneData)
+		t.subs = make(map[string]chan *cpb.InternalBroadcastData)
 	}
 	t.subs[nodeId] = ch
+
 	t.mu.Unlock()
-	//log.Printf("Node %s subscribed to RoundDone", nodeId)
 
 	defer func() {
 		t.mu.Lock()
@@ -138,7 +138,7 @@ func (t *transferServer) RoundDone(
 	}
 }
 
-func (t *transferServer) broadcast(msg *cpb.RoundDoneData) {
+func (t *transferServer) broadcast(msg *cpb.InternalBroadcastData) {
 	for _, ch := range t.subs {
 		select {
 		case ch <- msg:
@@ -148,8 +148,8 @@ func (t *transferServer) broadcast(msg *cpb.RoundDoneData) {
 }
 
 func (t *transferServer) subscribeDoneSignal(c cpb.TransferSignClient, nodeId string) error {
-	stream, err := c.RoundDone(context.Background(),
-		&cpb.RoundDoneRequest{NodeId: nodeId})
+	stream, err := c.InternalBroadcaster(context.Background(),
+		&cpb.InternalSubscribe{NodeId: nodeId})
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,6 @@ func (t *transferServer) subscribeDoneSignal(c cpb.TransferSignClient, nodeId st
 				return
 			}
 			if msg.Round == round {
-				//log.Println("Received RoundDone for round:", msg.Round, round)
 				close(t.wait)
 			}
 		}

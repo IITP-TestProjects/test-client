@@ -7,7 +7,7 @@ service TransferSign {
 
     rpc GetLegacySign(GetLegacySignRequest) returns (Ack);
 
-    rpc RoundDone(RoundDoneRequest) returns(stream RoundDoneData);
+    rpc InternalBroadcaster(InternalSubscribe) returns(stream InternalBroadcastData);
 }
 
 message GetPartSignRequest {
@@ -23,11 +23,11 @@ message GetLegacySignRequest {
     bytes publicKey = 3;
 }
 
-message RoundDoneRequest {
+message InternalSubscribe {
     string nodeId = 1;
 }
 
-message RoundDoneData {
+message InternalBroadcastData {
     uint64 round = 1;
 }
 

@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var node_num int
+var global_node_num int
 
 func main() {
 	nodeId := flag.String("nodeid", "node1", "node ID to subscribe. -node=<nodeId>")
@@ -26,7 +26,7 @@ func main() {
 	nodeNum := flag.Int("nodenum", 10, "number of nodes in the network. -nodenum=<node_num>")
 	flag.Parse()
 
-	node_num = *nodeNum
+	global_node_num = *nodeNum
 
 	ts := &transferServer{}
 
@@ -69,19 +69,35 @@ func runClient(nodeId string, ts *transferServer, serverAddr string) error {
 	if nodeId != "node1" {
 		ts.subscribeDoneSignal(priCli, nodeId)
 	}
-	legacySignScenario(nodeId, ts, priCli)
+	/* legacySignScenario(nodeId, ts, priCli) */
 
 	publicKey, secretKey = generateKeys()
 	ts.wait = make(chan struct{})
 
+	if nodeId != "node1" {
+		<-ts.wait
+		time.Sleep(1 * time.Second)
+	} else {
+		for {
+			ts.mu.Lock()
+			ready := len(ts.subs) >= global_node_num-1
+			ts.mu.Unlock()
+			if ready {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+			log.Println("check! subs:", len(ts.subs))
+		}
+		ts.broadcast(&cpb.InternalBroadcastData{Round: 0})
+	}
+	legacySignScenario(nodeId, ts, priCli)
+	log.Println("start scenario")
 	for {
 		aggregateSignScenario(client, nodeId)
-		//time.Sleep(10 * time.Second) // 20초마다 시나리오 반복
 		<-ts.wait
 		ts.wait = make(chan struct{})
-		time.Sleep(4 * time.Second) // 3초 대기 후 다음 라운드 시작
+		time.Sleep(4 * time.Second) // 4초 대기 후 다음 라운드 시작
 		round++
-		//log.Println("Round completed, Next round:", round)
 	}
 }
 
