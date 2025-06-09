@@ -53,7 +53,8 @@ func aggregateSignature(roundContext *roundState, cosignContext *cosignContext) 
 
 func verifySignature(cosignContext *cosignContext, aggregatedSign []byte) bool {
 	//log.Println("Aggregated Signature: ", aggregatedSign)
-	log.Printf("Size of aggSign: %d Bytes", len(aggregatedSign))
+	log.Printf("aggSign: %x\n", aggregatedSign)
+	log.Printf("Size of aggSign: %d Bytes\n", len(aggregatedSign))
 	log.Println("--------------Start Verify--------------")
 	start := time.Now()
 	ok := cosi.Verify(cosignContext.publicKeys, nil, testMsg, aggregatedSign)

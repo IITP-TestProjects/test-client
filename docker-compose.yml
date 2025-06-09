@@ -4,7 +4,7 @@ services:
   bc1:
     container_name: client1
     image: bcclient:0.1
-    command: ["--nodeid=node1", "--nodenum=10"]
+    command: ["--nodeid=node1", "--nodenum=4"]
     ports:
       - "50052:50052"
     networks:
