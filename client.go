@@ -23,6 +23,7 @@ var global_node_num int
 func main() {
 	nodeId := flag.String("nodeid", "node1", "node ID to subscribe. -node=<nodeId>")
 	serverAddress := flag.String("server", "interface-server1:50051", "--server=<serverIP>:<port>")
+	primaryAddress := flag.String("primary", "client1:50052", "--primary=<serverIP>:<port>")
 	nodeNum := flag.Int("nodenum", 10, "number of nodes in the network. -nodenum=<node_num>")
 	flag.Parse()
 
@@ -40,12 +41,13 @@ func main() {
 		time.Sleep(400 * time.Millisecond) // 다른 노드들은 잠시 대기
 	}
 
-	if err := runClient(*nodeId, ts, *serverAddress); err != nil {
+	if err := runClient(*nodeId, ts, *serverAddress, *primaryAddress); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runClient(nodeId string, ts *transferServer, serverAddr string) error {
+func runClient(
+	nodeId string, ts *transferServer, serverAddr string, primaryAddress string) error {
 	//grpc.Dial하는 함수의 경우, docker기반 테스트 환경이므로 해당 container명 기입함.
 	conn, err := grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -54,7 +56,7 @@ func runClient(nodeId string, ts *transferServer, serverAddr string) error {
 	}
 	defer conn.Close()
 
-	priCon, err := grpc.NewClient("client1:50052",
+	priCon, err := grpc.NewClient(primaryAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatal(err)
@@ -69,7 +71,6 @@ func runClient(nodeId string, ts *transferServer, serverAddr string) error {
 	if nodeId != "node1" {
 		ts.subscribeDoneSignal(priCli, nodeId)
 	}
-	/* legacySignScenario(nodeId, ts, priCli) */
 
 	publicKey, secretKey = generateKeys()
 	ts.wait = make(chan struct{})
