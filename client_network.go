@@ -8,8 +8,8 @@ import (
 	pb "test-client/proto_interface"
 	"time"
 
-	"github.com/bford/golang-x-crypto/ed25519"
-	"github.com/bford/golang-x-crypto/ed25519/cosi"
+	"test-client/golang-x-crypto/ed25519"
+	"test-client/golang-x-crypto/ed25519/cosi"
 )
 
 var (
@@ -57,7 +57,7 @@ func verifySignature(cosignContext *cosignContext, aggregatedSign []byte) bool {
 	log.Printf("Size of aggSign: %d Bytes\n", len(aggregatedSign))
 	log.Println("--------------Start Verify--------------")
 	start := time.Now()
-	ok := cosi.Verify(cosignContext.publicKeys, nil, testMsg, aggregatedSign)
+	ok := cosi.Verify(cosignContext.publicKeys, nil, []byte("badmessage"), aggregatedSign)
 	duration := time.Since(start)
 	log.Printf("Verify Result: %t, Duration: %s\n", ok, duration)
 	log.Println("--------------End Verify--------------")

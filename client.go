@@ -13,7 +13,8 @@ import (
 	cpb "test-client/proto_client"
 	pb "test-client/proto_interface"
 
-	"github.com/bford/golang-x-crypto/ed25519/cosi"
+	"test-client/golang-x-crypto/ed25519/cosi"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

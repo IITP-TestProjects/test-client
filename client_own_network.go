@@ -7,7 +7,8 @@ import (
 	"sync"
 	cpb "test-client/proto_client"
 
-	"github.com/bford/golang-x-crypto/ed25519/cosi"
+	"test-client/golang-x-crypto/ed25519/cosi"
+
 	"google.golang.org/grpc"
 )
 

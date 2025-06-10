@@ -7,7 +7,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/bford/golang-x-crypto/ed25519"
+	"test-client/golang-x-crypto/ed25519"
 
 	vrfs "test-client/vrfs"
 )
