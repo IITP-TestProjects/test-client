@@ -57,7 +57,7 @@ func verifySignature(cosignContext *cosignContext, aggregatedSign []byte) bool {
 	log.Printf("Size of aggSign: %d Bytes\n", len(aggregatedSign))
 	log.Println("--------------Start Verify--------------")
 	start := time.Now()
-	ok := cosi.Verify(cosignContext.publicKeys, nil, []byte("badmessage"), aggregatedSign)
+	ok := cosi.Verify(cosignContext.publicKeys, nil, testMsg, aggregatedSign)
 	duration := time.Since(start)
 	log.Printf("Verify Result: %t, Duration: %s\n", ok, duration)
 	log.Println("--------------End Verify--------------")

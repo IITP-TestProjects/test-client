@@ -4,7 +4,7 @@ services:
   bc1:
     container_name: client1
     image: bcclient:0.1
-    command: ["--nodeid=node1", "--nodenum=4"]
+    command: ["--nodeid=node1", "--nodenum=10"]
     ports:
       - "50052:50052"
     networks:
@@ -14,6 +14,8 @@ services:
     container_name: client2
     image: bcclient:0.1
     command: ["--nodeid=node2"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -21,6 +23,8 @@ services:
     container_name: client3
     image: bcclient:0.1
     command: ["--nodeid=node3"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -28,6 +32,8 @@ services:
     container_name: client4
     image: bcclient:0.1
     command: ["--nodeid=node4"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -35,6 +41,8 @@ services:
     container_name: client5
     image: bcclient:0.1
     command: ["--nodeid=node5"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -42,6 +50,8 @@ services:
     container_name: client6
     image: bcclient:0.1
     command: ["--nodeid=node6"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
       
@@ -49,6 +59,8 @@ services:
     container_name: client7
     image: bcclient:0.1
     command: ["--nodeid=node7"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -56,6 +68,8 @@ services:
     container_name: client8
     image: bcclient:0.1
     command: ["--nodeid=node8"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
 
@@ -63,6 +77,8 @@ services:
     container_name: client9
     image: bcclient:0.1
     command: ["--nodeid=node9"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
       
@@ -70,8 +86,12 @@ services:
     container_name: client10
     image: bcclient:0.1
     command: ["--nodeid=node10"]
+    depends_on:
+      - bc1
     networks:
       - test-server_bc_interface
+  
+
 
 networks:
   test-server_bc_interface:

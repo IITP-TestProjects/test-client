@@ -72,7 +72,7 @@ func (t *transferServer) GetLegacySign(
 		duration := time.Since(start)
 		log.Printf("Legacy verify PASS\n")
 		log.Printf("Duration: %s\n", duration)
-		log.Printf("-------------- Start Legacy Sign Verify--------------\n")
+		log.Printf("-------------- End Legacy Sign Verify--------------\n")
 
 		return &cpb.Ack{Ok: true}, nil
 	}
