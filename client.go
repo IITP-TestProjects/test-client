@@ -100,6 +100,7 @@ func runClient(
 		ts.wait = make(chan struct{})
 		time.Sleep(4 * time.Second) // 4초 대기 후 다음 라운드 시작
 		round++
+		log.Printf("Round %d started!\n", round)
 	}
 }
 

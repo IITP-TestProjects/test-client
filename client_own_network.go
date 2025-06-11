@@ -104,6 +104,7 @@ func sendPrimaryNodeForAggregateSignature(
 			log.Fatalf("GetPartSign failed: %v", err)
 		}
 	}
+	log.Println("Send part sign to primary node")
 }
 
 func (t *transferServer) InternalBroadcaster(

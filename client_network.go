@@ -124,6 +124,8 @@ func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClie
 			sigPart := cosi.Cosign(secretKey, secretR, testMsg,
 				ts.cosignContext.aggPubKey, msg.AggregatedCommit)
 
+			log.Printf("generate sigPart: %x\n", sigPart)
+
 			if nodeId != "node1" {
 				time.Sleep(5 * time.Second) //임시코드(node1 우선실행 최대한 보장) 다른방법을 찾아봐.
 				sendPrimaryNodeForAggregateSignature(priCli, nodeId, sigPart, msg.Round)
