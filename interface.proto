@@ -31,11 +31,9 @@ message CommitteeCandidateInfo {
   bytes publicKey = 5;
   bytes commit = 6;
 
-  string metricData1 = 7;
-  string metricData2 = 8;
-  string metricData3 = 9;
-  //NodeAccount node = 2; //해당 정보는 ipAddress를 통해 확인 가능하므로 필요 없음
-  //...
+  string ipAddress = 7; //노드의 IP 주소
+  string port = 8;      //노드의 포트 번호
+  string channel = 9;   //패브릭 채널 이름
 }
 
 //예시 

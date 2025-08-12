@@ -149,6 +149,7 @@ func (t *transferServer) broadcast(msg *cpb.InternalBroadcastData) {
 	}
 }
 
+// 자체 client간 통신을 위한 subscribe 함수
 func (t *transferServer) subscribeDoneSignal(c cpb.TransferSignClient, nodeId string) error {
 	stream, err := c.InternalBroadcaster(context.Background(),
 		&cpb.InternalSubscribe{NodeId: nodeId})

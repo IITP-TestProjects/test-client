@@ -125,6 +125,11 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 		log.Fatalln(err)
 	}
 
+	myIP, err := getLocalIP()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	// 4. Server로 Request를 보내 서명압축에 필요한 정보와 자신을 식별할 수 있는 ID를 전송
 	// 이후 과정은 서버에서 진행 및 연결한 Subscribe channel로 정보가 내려옴.
 	if round == 0 {
@@ -138,9 +143,9 @@ func aggregateSignScenario(c pb.MeshClient, nodeId string) {
 				PublicKey: publicKey,
 				Commit:    commit,
 
-				MetricData1: "test-metric1",
-				MetricData2: "test-metric2",
-				MetricData3: "test-metric3",
+				IpAddress: myIP,
+				Port:      "50051",
+				Channel:   "channelName",
 			},
 		)
 		//false가 반환된 경우라면 해당 노드는 이미 프로세스가 시작되었으므로 라운드에 참여 못했다는 뜻.
