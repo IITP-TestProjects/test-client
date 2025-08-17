@@ -93,7 +93,7 @@ func (ts *transferServer) initRoundContext() {
 // [NonRPC] 내부에서 사용하는 함수
 func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClient, nodeId string) error {
 	stream, err := c.JoinNetwork(context.Background(),
-		&pb.NodeAccount{NodeId: nodeId})
+		&pb.CommitteeCandidateInfo{NodeId: nodeId})
 	if err != nil {
 		return err
 	}
