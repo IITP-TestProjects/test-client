@@ -43,11 +43,7 @@ message FinalizedCommittee {
   //노드를 식별할 수 있는 unique한 값들로 구성된 리스트
   string channel = 2;
   repeated string nodeId = 3;
-<<<<<<< HEAD
-  string leader_nodeId = 4;
-=======
   string leader_nodeId = 4; //client의 경우 테스트코드이므로, 고정 리더 사용
->>>>>>> 0a98267 (feat: client - CEF - veifier 구조로 작동하게 수정)
 
   bytes aggregatedCommit = 5;
   bytes aggregatedPubKey = 6;
