@@ -8,7 +8,7 @@ services:
     ports:
       - "50052:50052"
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
   
   bc2:
     container_name: client2
@@ -17,7 +17,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc3:
     container_name: client3
@@ -26,7 +26,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc4:
     container_name: client4
@@ -35,7 +35,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc5:
     container_name: client5
@@ -44,7 +44,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc6:
     container_name: client6
@@ -53,8 +53,8 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
-      
+      - test-verifier_bc_interface
+
   bc7:
     container_name: client7
     image: bcclient:0.1
@@ -62,7 +62,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc8:
     container_name: client8
@@ -71,7 +71,7 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
+      - test-verifier_bc_interface
 
   bc9:
     container_name: client9
@@ -80,8 +80,8 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
-      
+      - test-verifier_bc_interface
+
   bc10:
     container_name: client10
     image: bcclient:0.1
@@ -89,8 +89,8 @@ services:
     depends_on:
       - bc1
     networks:
-      - test-server_bc_interface
-  
+      - test-verifier_bc_interface
+
 networks:
-  test-server_bc_interface:
+  test-verifier_bc_interface:
     external: true

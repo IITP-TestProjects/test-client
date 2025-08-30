@@ -24,9 +24,9 @@ message NodeAccount {
 //예시
 message CommitteeCandidateInfo {
   uint64 round = 1;
-  string nodeId = 2;
+  string nodeId = 2;  //노드의 libp2p 식별자(또는 구별가능한 string)
 
-  //2-3번 데이터는 VrfResult 데이터
+  //3,4번 데이터는 VrfResult 데이터
   string seed = 3;
   bytes proof = 4;
   bytes publicKey = 5;
@@ -43,7 +43,11 @@ message FinalizedCommittee {
   //노드를 식별할 수 있는 unique한 값들로 구성된 리스트
   string channel = 2;
   repeated string nodeId = 3;
+<<<<<<< HEAD
   string leader_nodeId = 4;
+=======
+  string leader_nodeId = 4; //client의 경우 테스트코드이므로, 고정 리더 사용
+>>>>>>> 0a98267 (feat: client - CEF - veifier 구조로 작동하게 수정)
 
   bytes aggregatedCommit = 5;
   bytes aggregatedPubKey = 6;

@@ -126,8 +126,10 @@ func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClie
 
 			log.Printf("generate sigPart: %x\n", sigPart)
 
-			if nodeId != "node1" {
-				time.Sleep(5 * time.Second) //임시코드(node1 우선실행 최대한 보장) 다른방법을 찾아봐.
+			//분기: 리더노드인 경우, sigPart를 브로드캐스트
+			log.Println("Leader NodeId:", msg.LeaderNodeId)
+			if nodeId != "node1" /* "node1" */ {
+				time.Sleep(5 * time.Second) //임시코드(리더노드 우선실행 최대한 보장) 다른방법을 찾아봐.
 				sendPrimaryNodeForAggregateSignature(priCli, nodeId, sigPart, msg.Round)
 			} else {
 				if msg.NodeId != nil {
