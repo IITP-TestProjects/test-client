@@ -77,10 +77,8 @@ func runClient(
 	ts.wait = make(chan struct{})
 
 	if nodeId != "node1" {
-		// Wait for the start broadcast once, then reset for completion wait
 		<-ts.wait
 		time.Sleep(1 * time.Second)
-		ts.wait = make(chan struct{})
 	} else {
 		for {
 			ts.mu.Lock()
@@ -96,18 +94,14 @@ func runClient(
 	}
 	legacySignScenario(nodeId, ts, priCli)
 	log.Println("start scenario")
-	/* for {
+	for {
 		aggregateSignScenario(client, nodeId)
 		<-ts.wait
 		ts.wait = make(chan struct{})
 		time.Sleep(4 * time.Second) // 4초 대기 후 다음 라운드 시작
 		round++
 		log.Printf("Round %d started!\n", round)
-	} */
-	aggregateSignScenario(client, nodeId)
-	<-ts.wait
-
-	return nil
+	}
 }
 
 // O(1)만에 검증가능한 sign 시연 시나리오
