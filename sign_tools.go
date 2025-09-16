@@ -73,7 +73,7 @@ func (t *transferServer) verifyRosterHash(aggregatedSign []byte) bool {
 		log.Println("roster-hash bound verification failed: sB != R + cA")
 		return false
 	} else {
-		log.Println("roster-hash bound verification succeeded")
+		//log.Println("roster-hash bound verification succeeded")
 		return true
 	}
 }
