@@ -48,6 +48,7 @@ message FinalizedCommittee {
   bytes aggregatedCommit = 5;
   bytes aggregatedPubKey = 6;
   repeated bytes publicKeys = 7 ;  //cosi.NewCosigners(pubKeys, nil)에 필요한 데이터
+  bytes rosterHash = 8;
 }
 
 message CommitData {

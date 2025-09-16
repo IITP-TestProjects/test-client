@@ -81,6 +81,9 @@ func (t *transferServer) GetPartSign(
 		return &cpb.Ack{Ok: false}, nil
 	}
 
+	//roster hash를 이용한 공개키 명시적 증명
+	t.verifyRosterHash(aggregatedSign)
+
 	delete(t.roundContext, sigRound) //Garbage Collection
 
 	close(t.wait)

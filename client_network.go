@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"io"
 	"log"
+	"net"
+	"sort"
 	cpb "test-client/proto_client"
 	pb "test-client/proto_interface"
 	"time"
@@ -25,6 +30,7 @@ type cosignContext struct {
 	publicKeys []ed25519.PublicKey
 	aggCommit  []byte
 	aggPubKey  []byte // 커밋값이 정해진 상태에서 사용됨
+	rosterHash []byte // 정렬 기반 로스터 해시(SHA-256)
 }
 
 type legacySignState struct {
@@ -51,34 +57,6 @@ func aggregateSignature(roundContext *roundState, cosignContext *cosignContext) 
 	return aggregatedSign
 }
 
-func verifySignature(cosignContext *cosignContext, aggregatedSign []byte) bool {
-	//log.Println("Aggregated Signature: ", aggregatedSign)
-	log.Printf("aggSign: %x\n", aggregatedSign)
-	log.Printf("Size of aggSign: %d Bytes\n", len(aggregatedSign))
-	log.Println("--------------Start Verify--------------")
-	start := time.Now()
-	ok := cosi.Verify(cosignContext.publicKeys, nil, testMsg, aggregatedSign)
-	duration := time.Since(start)
-	log.Printf("Verify Result: %t, Duration: %s\n", ok, duration)
-	log.Println("--------------End Verify--------------")
-	return ok
-}
-
-func (t *transferServer) setCosignContext(msg *pb.FinalizedCommittee) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	var pubKeys []ed25519.PublicKey
-	for _, pk := range msg.PublicKeys {
-		pubKeys = append(pubKeys, ed25519.PublicKey(pk))
-	}
-
-	// 커밋값이 정해진 상태에서 커밋값을 사용
-	t.cosignContext = &cosignContext{
-		publicKeys: pubKeys,
-		aggPubKey:  msg.AggregatedPubKey,
-	}
-}
-
 func (ts *transferServer) initRoundContext() {
 	// roundContext 초기화
 	if ts.roundContext == nil {
@@ -88,6 +66,36 @@ func (ts *transferServer) initRoundContext() {
 	if _, ok := ts.roundContext[round]; !ok {
 		ts.roundContext[round] = &roundState{}
 	}
+}
+
+// 공개키 목록([][]byte)로 정렬 기반 로스터 해시 생성
+func computeRosterHash(pubKeys [][]byte) []byte {
+	if len(pubKeys) == 0 {
+		return nil
+	}
+	arr := make([][]byte, 0, len(pubKeys))
+	for _, pk := range pubKeys {
+		b := make([]byte, len(pk))
+		copy(b, pk)
+		arr = append(arr, b)
+	}
+	sort.Slice(arr, func(i, j int) bool { return bytes.Compare(arr[i], arr[j]) < 0 })
+	h := sha256.New()
+	for _, b := range arr {
+		h.Write(b)
+	}
+	return h.Sum(nil)
+}
+
+// 메시지 바인딩: m' = SHA-256(m || rosterHash)
+func bindMessage(msg []byte, rosterHash []byte) []byte {
+	if len(rosterHash) == 0 {
+		return msg
+	}
+	h := sha256.New()
+	h.Write(msg)
+	h.Write(rosterHash)
+	return h.Sum(nil)
 }
 
 // [NonRPC] 내부에서 사용하는 함수
@@ -121,7 +129,8 @@ func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClie
 			}
 			ts.cosignContext.aggCommit = msg.AggregatedCommit
 
-			sigPart := cosi.Cosign(secretKey, secretR, testMsg,
+			boundMsg := bindMessage(testMsg, ts.cosignContext.rosterHash)
+			sigPart := cosi.Cosign(secretKey, secretR, boundMsg,
 				ts.cosignContext.aggPubKey, msg.AggregatedCommit)
 
 			log.Printf("generate sigPart: %x\n", sigPart)
@@ -144,4 +153,20 @@ func (ts *transferServer) subscribe(c pb.MeshClient, priCli cpb.TransferSignClie
 		}
 	}()
 	return nil
+}
+
+func getLocalIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("외부 통신이 가능한 로컬 IP 주소를 찾을 수 없습니다")
 }
